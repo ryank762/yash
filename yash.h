@@ -6,8 +6,5 @@
  */
 
 extern char* TokenTable[1000];
-                                                // global array containing pointers to tokens of input command
 extern int TokenCount;
-                                                // global int containing numbers of tokens in TokenTable
 extern char* currentCommand;
-                                                // deep copy of command once read

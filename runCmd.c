@@ -91,6 +91,10 @@ void execCmd1(int startIdx, int endIdx) {   // no pipes
 
     } else {                        // parent
         if (strcmp(TokenTable[endIdx-1], "&") != 0) {
+            /*
+            printf("parent pid: %d\n", getpid());                   // debugging
+            printf("child pid: %d\n", cpid);                        // debugging
+             */
             addJob(cpid, -1, false, false, currentCommand);
             pause();
         } else {
@@ -106,7 +110,7 @@ void execCmd2(int pipeIdx) {                // contains pipes
     pipe(pipefd);
 
     cpid1 = fork();
-    //setpgid(cpid1, cpid1);
+    setpgid(cpid1, cpid1);
     if (cpid1 == 0) {                   // child 1
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
@@ -115,7 +119,7 @@ void execCmd2(int pipeIdx) {                // contains pipes
 
     } else {                            // parent and child 2
         cpid2 = fork();
-        //setpgid(cpid2, cpid1);
+        setpgid(cpid2, cpid1);
         if (cpid2 == 0) {               // child 2
             close(pipefd[1]);
             dup2(pipefd[0], STDIN_FILENO);

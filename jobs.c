@@ -67,7 +67,7 @@ void addJob(pid_t pid1, pid_t pid2, bool isBackground, bool isProcessGroup, char
     return;
 }
 
-int deleteJob(pid_t pid) {
+int deleteJob(pid_t pid) {      // return 0 on success, -1 on fail
     JobList* current = ListHead.newestJob;
     JobList* previous = NULL;
     while (current != NULL && current->pid1 != pid && current->pid2 != pid) {
@@ -120,6 +120,7 @@ void sendToForeground() {
         current->status = RUNNING;
         current->isBackground = false;
         printf("%s\n", current->command);
+        //printf("sending SIGCONT to process with pid: %d\n", current->pid);
         if (current->isProcessGroup) {
             if (current->pid1 != -1) {
                 kill(current->pid1, SIGCONT);
@@ -133,10 +134,14 @@ void sendToForeground() {
             if (current->pid2 != -1) {
                 waitid(P_PID, current->pid2, &siginfo, WEXITED | WSTOPPED);
             }
+            //pause();
         } else {
             kill(current->pid1, SIGCONT);
             waitid(P_PID, current->pid1, &siginfo, WEXITED | WSTOPPED);
+            //pause();
         }
+        //cpid = waitpid(-1, &status, WNOHANG);
+        //pause();
     }
 }
 
@@ -234,6 +239,7 @@ void printJobTable() {
 }
 
 void SIGINT_Handler(int signal) {
+    //JobList* current = findJobByStatus(RUNNING);
     JobList* current = ListHead.newestJob;
     if (current == NULL) {
         return;
@@ -255,13 +261,23 @@ void SIGINT_Handler(int signal) {
 }
 
 void SIGTSTP_Handler(int signal) {
-    JobList* current = ListHead.newestJob;
+    //printf("caught SIGTSTP\n");
+    JobList* current = findJobByStatus(RUNNING);
     if (current == NULL) {
         return;
     }
+    /*
+    printf("command : %s\n", current->command);
+    printf("isBackground: %d\n", current->isBackground);
+     */
     if (current->isBackground == false) {
+        /*
+        printf("yash cpid: %d\n", getpid());
+        printf("child cpid: %d\n", current->pid);
+        printf("in a process group? %d\n", current->isProcessGroup);
+         */
         current->status = STOPPED;
-        cleanUpDoneJobs();
+        printJobTable();
         if (current->isProcessGroup == true) {
             if (current->pid1 != -1) {
                 kill(current->pid1, SIGTSTP);
@@ -277,10 +293,9 @@ void SIGTSTP_Handler(int signal) {
 
 void SIGCHLD_Handler(int signal) {
     int status;
-    siginfo_t siginfo;
-    waitid(P_ALL, 0, &siginfo, WEXITED|WSTOPPED|WCONTINUED);
-    pid_t cpid = siginfo.si_pid;
-   JobList* current = findJobByPID(cpid);
+    pid_t cpid = waitpid(-1, &status, WNOHANG);
+    //printf("caught SIGCHLD %d\n", cpid);
+    JobList* current = findJobByPID(cpid);
     if (current != NULL) {
         if (current->status == RUNNING && current->isBackground == true) {
             if (current->isProcessGroup) {
@@ -289,9 +304,7 @@ void SIGCHLD_Handler(int signal) {
                 }
                 current->doneCount++;
             } else {
-                if (siginfo.si_code == CLD_EXITED) {
-                    current->status = DONE;
-                }
+                current->status = DONE;
             }
         }
         if (current->status == RUNNING && current->isBackground == false) {

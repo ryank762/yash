@@ -6,7 +6,5 @@
  */
 
 void execCmd1(int startIdx, int endIdx);
-                                                // executes one command
 
 void execCmd2(int pipeIdx);
-                                                // executes two commands (handles pipes)
